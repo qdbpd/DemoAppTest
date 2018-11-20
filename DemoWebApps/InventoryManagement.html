@@ -1,0 +1,156 @@
+﻿<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8" />
+    <title>在庫管理</title>
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.3.1/jquery.min.js"></script>
+    <link href="css/StyleSheet.css" rel="stylesheet">
+</head>
+<body>
+    <div>
+        <h2>在庫の更新</h2>
+        <div class="input-form">
+            <p>
+                <h6>倉庫の選択</h6>
+                <select id="inventory" class="form-control input-field">
+                    <option value="0">選択してください</option>
+                    <option value="1">倉庫1</option>
+                    <option value="2">倉庫2</option>
+                    <option value="3">倉庫3</option>
+                    <option value="4">倉庫4</option>
+                    <option value="5">倉庫5</option>
+                    <option value="6">倉庫6</option>
+                    <option value="7">倉庫7</option>
+                    <option value="8">倉庫8</option>
+                    <option value="9">倉庫9</option>
+                    <option value="10">倉庫10</option>
+                    <option value="11">倉庫11</option>
+                    <option value="12">倉庫12</option>
+                    <option value="13">倉庫13</option>
+                    <option value="14">倉庫14</option>
+                    <option value="15">倉庫15</option>
+                </select>
+            </p>
+            <p>
+                <h6>品名</h6>
+                <select id="productName" class="form-control input-field">
+                    <option>選択してください</option>
+                </select>
+            </p>
+
+            <p>
+                <h6>在庫数</h6>
+                <input type="number" id="quantity" class="form-control input-field" />個
+            </p>
+            <div>
+                <input type="submit" value="更新" id="updateButton" class="btn btn-primary btn-wide">
+            </div>
+        </div>
+    </div>
+    <script>
+        $(document).ready(function () {
+            var stocks = [];
+            var inventoryStocks = [];
+
+            // 在庫リストの取得
+            $.ajax({
+                url: "http://demowebappapi.azurewebsites.net/api/Stocks",
+                type: "GET"
+            }).done(function (responce) {
+                stocks = responce;
+            }).fail(function (error) {
+                alert(JSON.stringify(error));
+            });
+
+            //在庫リストの表示
+            $("#inventory").on("change", function () {
+                // 在庫リストを初期化
+                $("#productName").empty();
+                $("#productName").append("<option>選択してください</option>");
+
+                // 倉庫単位に絞り込み
+                inventoryStocks = $.grep(stocks, function (value) {
+                    return $("#inventory").val() == value.InventoryId;
+                });
+
+                // 在庫リストのプルダウン作成
+                $.each(inventoryStocks, function (index, value) {
+                    $("#productName").append("<option value=" + value.ProductId + ">" + value.Name + "</option>");
+                });
+
+                $("#quantity").val("");
+            });
+
+            // 在庫数の表示
+            $("#productName").on("change", function () {
+                var id = $("#productName").val();
+                if (!id) {
+                    return;
+                }
+                // 在庫リストからプルダウンで選択した商品のIDに一致する在庫を抽出
+                var stock = $.grep(inventoryStocks, function (value) {
+                    return id == value.ProductId;
+                });
+
+                // 在庫リストから選択した商品の在庫数を表示
+                $("#quantity").val(stock[0].Quantity);
+            });
+
+            // 更新ボタン押下時
+            $("#updateButton").on("click", function () {
+                if (!$("#inventory").val() || !$("#productName").val() || !$("#quantity").val()) {
+                    return;
+                }
+
+                // 更新前の品名を退避
+                var selectedStockBeforeUpdate = $("#productName").val();
+
+                // 在庫の更新
+                var data = {
+                    InventoryId: $("#inventory").val(),
+                    ProductId: $("#productName").val(),
+                    Quantity: $("#quantity").val()
+                };
+                $.ajax({
+                    url: "http://demowebappapi.azurewebsites.net/api/Stocks?InventoryId=" + $("#inventory").val() + "&ProductId=" + $("#productName").val(),
+                    type: "PUT",
+                    data: data,
+                    dataType: "json"
+                }).done(function (responce) {
+                    alert("更新しました");
+
+                }).fail(function (error) {
+                    alert(JSON.stringify(error));
+                });
+                // 在庫リストの再取得
+                $.ajax({
+                    url: "http://demowebappapi.azurewebsites.net/api/Stocks",
+                    type: "GET"
+                }).done(function (responce) {
+                    stocks = responce;
+
+                    // 在庫リストを初期化
+                    $("#productName").empty();
+                    $("#productName").append("<option>選択してください</option>");
+
+                    // 倉庫単位に絞り込み
+                    inventoryStocks = $.grep(stocks, function (value) {
+                        return $("#inventory").val() == value.InventoryId;
+                    });
+
+                    // 在庫リストのプルダウン作成
+                    $.each(inventoryStocks, function (index, value) {
+                        $("#productName").append("<option value=" + value.ProductId + ">" + value.Name + "</option>");
+                    });
+
+                    // 更新ボタン押下時に選択していた品名を再表示
+                    $("#productName").val(selectedStockBeforeUpdate);
+
+                }).fail(function (error) {
+                    alert(JSON.stringify(error));
+                });
+            });
+        });
+    </script>
+</body>
+</html>
